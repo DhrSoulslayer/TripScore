@@ -92,6 +92,25 @@ export function ReportPage() {
   const grandTotalKm = reportRows.reduce((s, r) => s + r.totalKm, 0);
   const grandTotalCost = reportRows.reduce((s, r) => s + r.totalCost, 0);
 
+  const carSummaryRows = useMemo(() => {
+    const carMap = new Map<string, { carId: string; name: string; km: number; cost: number }>();
+    monthTrips.forEach(trip => {
+      const car = cars.find(c => c.id === trip.carId);
+      if (!carMap.has(trip.carId)) {
+        carMap.set(trip.carId, {
+          carId: trip.carId,
+          name: car?.name ?? 'Onbekende auto',
+          km: 0,
+          cost: 0,
+        });
+      }
+      const row = carMap.get(trip.carId)!;
+      row.km += trip.kilometers;
+      row.cost += trip.kilometers * (car?.costPerKm ?? 0);
+    });
+    return Array.from(carMap.values());
+  }, [monthTrips, cars]);
+
   function prevMonth() {
     if (month === 1) { setYear(y => y - 1); setMonth(12); }
     else setMonth(m => m - 1);
@@ -253,31 +272,15 @@ export function ReportPage() {
                 </tr>
               </thead>
               <tbody>
-                {(() => {
-                  const carMap = new Map<string, { name: string; km: number; cost: number }>();
-                  monthTrips.forEach(trip => {
-                    const car = cars.find(c => c.id === trip.carId);
-                    if (!carMap.has(trip.carId)) {
-                      carMap.set(trip.carId, {
-                        name: car?.name ?? 'Onbekende auto',
-                        km: 0,
-                        cost: 0,
-                      });
-                    }
-                    const row = carMap.get(trip.carId)!;
-                    row.km += trip.kilometers;
-                    row.cost += trip.kilometers * (car?.costPerKm ?? 0);
-                  });
-                  return Array.from(carMap.values()).map((row, i) => (
-                    <tr key={i}>
-                      <td>{row.name}</td>
-                      <td style={{ textAlign: 'right' }}>{formatKm(row.km)}</td>
-                      <td style={{ textAlign: 'right', color: 'var(--color-success)' }}>
-                        {formatEuro(row.cost)}
-                      </td>
-                    </tr>
-                  ));
-                })()}
+                {carSummaryRows.map(row => (
+                  <tr key={row.carId}>
+                    <td>{row.name}</td>
+                    <td style={{ textAlign: 'right' }}>{formatKm(row.km)}</td>
+                    <td style={{ textAlign: 'right', color: 'var(--color-success)' }}>
+                      {formatEuro(row.cost)}
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>

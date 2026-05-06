@@ -76,6 +76,7 @@ function createIconPNG(size, bgColor, fgColor) {
       const px = rowStart + 1 + x * 3;
 
       // Rounded rect check (for rounded corners)
+      // dx/dy measure distance outside the rounded-rectangle's inner box
       const dx = Math.max(pad + cornerR - x, 0, x - (s - pad - cornerR - 1));
       const dy = Math.max(pad + cornerR - y, 0, y - (s - pad - cornerR - 1));
       const inRoundedRect = dx * dx + dy * dy <= cornerR * cornerR &&
