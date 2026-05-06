@@ -1,31 +1,36 @@
 import type { Car, Driver, Trip } from './types';
 
-const KEYS = {
-  cars: 'tripscore_cars',
-  drivers: 'tripscore_drivers',
-  trips: 'tripscore_trips',
-} as const;
+const BASE = '/api';
 
-function load<T>(key: string, defaultValue: T): T {
-  try {
-    const stored = localStorage.getItem(key);
-    return stored ? (JSON.parse(stored) as T) : defaultValue;
-  } catch {
-    return defaultValue;
+async function request<T>(
+  method: string,
+  path: string,
+  body?: unknown,
+): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, {
+    method,
+    headers: body ? { 'Content-Type': 'application/json' } : {},
+    body: body != null ? JSON.stringify(body) : undefined,
+  });
+  if (!res.ok) {
+    throw new Error(`API ${method} ${path} → ${res.status}`);
   }
-}
-
-function save<T>(key: string, value: T): void {
-  localStorage.setItem(key, JSON.stringify(value));
+  if (res.status === 204) return undefined as T;
+  return res.json() as Promise<T>;
 }
 
 export const store = {
-  getCars: (): Car[] => load<Car[]>(KEYS.cars, []),
-  saveCars: (cars: Car[]) => save(KEYS.cars, cars),
+  getCars: () => request<Car[]>('GET', '/cars'),
+  addCarRemote: (car: Omit<Car, 'id'>) => request<Car>('POST', '/cars', car),
+  updateCarRemote: (car: Car) => request<Car>('PUT', `/cars/${car.id}`, car),
+  deleteCarRemote: (id: string) => request<void>('DELETE', `/cars/${id}`),
 
-  getDrivers: (): Driver[] => load<Driver[]>(KEYS.drivers, []),
-  saveDrivers: (drivers: Driver[]) => save(KEYS.drivers, drivers),
+  getDrivers: () => request<Driver[]>('GET', '/drivers'),
+  addDriverRemote: (driver: Omit<Driver, 'id'>) => request<Driver>('POST', '/drivers', driver),
+  updateDriverRemote: (driver: Driver) => request<Driver>('PUT', `/drivers/${driver.id}`, driver),
+  deleteDriverRemote: (id: string) => request<void>('DELETE', `/drivers/${id}`),
 
-  getTrips: (): Trip[] => load<Trip[]>(KEYS.trips, []),
-  saveTrips: (trips: Trip[]) => save(KEYS.trips, trips),
+  getTrips: () => request<Trip[]>('GET', '/trips'),
+  addTripRemote: (trip: Omit<Trip, 'id'>) => request<Trip>('POST', '/trips', trip),
+  deleteTripRemote: (id: string) => request<void>('DELETE', `/trips/${id}`),
 };

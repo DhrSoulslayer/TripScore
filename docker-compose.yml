@@ -1,9 +1,26 @@
 services:
+  api:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: tripscore-api
+    volumes:
+      - tripscore-data:/data
+    environment:
+      - DATA_DIR=/data
+      - PORT=3001
+    restart: unless-stopped
+
   tripscore:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: tripscore
     ports:
-      - "8080:80"
+      - "8083:80"
+    depends_on:
+      - api
     restart: unless-stopped
+
+volumes:
+  tripscore-data:

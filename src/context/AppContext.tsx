@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
 import type { Car, Driver, Trip } from '../types';
 import { store } from '../store';
 
@@ -6,6 +6,7 @@ interface AppContextType {
   cars: Car[];
   drivers: Driver[];
   trips: Trip[];
+  loading: boolean;
   addCar: (car: Omit<Car, 'id'>) => void;
   updateCar: (car: Car) => void;
   deleteCar: (id: string) => void;
@@ -19,74 +20,67 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [cars, setCars] = useState<Car[]>(() => store.getCars());
-  const [drivers, setDrivers] = useState<Driver[]>(() => store.getDrivers());
-  const [trips, setTrips] = useState<Trip[]>(() => store.getTrips());
+  const [cars, setCars] = useState<Car[]>([]);
+  const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [trips, setTrips] = useState<Trip[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Load all data from API on mount
+  useEffect(() => {
+    Promise.all([store.getCars(), store.getDrivers(), store.getTrips()])
+      .then(([c, d, t]) => {
+        setCars(c);
+        setDrivers(d);
+        setTrips(t);
+      })
+      .finally(() => setLoading(false));
+  }, []);
 
   const addCar = useCallback((carData: Omit<Car, 'id'>) => {
-    const car: Car = { ...carData, id: crypto.randomUUID() };
-    setCars(prev => {
-      const updated = [...prev, car];
-      store.saveCars(updated);
-      return updated;
+    void store.addCarRemote(carData).then(car => {
+      setCars(prev => [...prev, car]);
     });
   }, []);
 
   const updateCar = useCallback((car: Car) => {
-    setCars(prev => {
-      const updated = prev.map(c => (c.id === car.id ? car : c));
-      store.saveCars(updated);
-      return updated;
+    void store.updateCarRemote(car).then(updated => {
+      setCars(prev => prev.map(c => (c.id === updated.id ? updated : c)));
     });
   }, []);
 
   const deleteCar = useCallback((id: string) => {
-    setCars(prev => {
-      const updated = prev.filter(c => c.id !== id);
-      store.saveCars(updated);
-      return updated;
+    void store.deleteCarRemote(id).then(() => {
+      setCars(prev => prev.filter(c => c.id !== id));
     });
   }, []);
 
   const addDriver = useCallback((driverData: Omit<Driver, 'id'>) => {
-    const driver: Driver = { ...driverData, id: crypto.randomUUID() };
-    setDrivers(prev => {
-      const updated = [...prev, driver];
-      store.saveDrivers(updated);
-      return updated;
+    void store.addDriverRemote(driverData).then(driver => {
+      setDrivers(prev => [...prev, driver]);
     });
   }, []);
 
   const updateDriver = useCallback((driver: Driver) => {
-    setDrivers(prev => {
-      const updated = prev.map(d => (d.id === driver.id ? driver : d));
-      store.saveDrivers(updated);
-      return updated;
+    void store.updateDriverRemote(driver).then(updated => {
+      setDrivers(prev => prev.map(d => (d.id === updated.id ? updated : d)));
     });
   }, []);
 
   const deleteDriver = useCallback((id: string) => {
-    setDrivers(prev => {
-      const updated = prev.filter(d => d.id !== id);
-      store.saveDrivers(updated);
-      return updated;
+    void store.deleteDriverRemote(id).then(() => {
+      setDrivers(prev => prev.filter(d => d.id !== id));
     });
   }, []);
 
   const addTrip = useCallback((tripData: Omit<Trip, 'id'>) => {
-    const trip: Trip = { ...tripData, id: crypto.randomUUID() };
-    setTrips(prev => {
-      const updated = [trip, ...prev];
-      store.saveTrips(updated);
-      return updated;
+    void store.addTripRemote(tripData).then(trip => {
+      setTrips(prev => [trip, ...prev]);
     });
   }, []);
 
   const deleteTrip = useCallback((id: string) => {
-    setTrips(prev => {
-      const updated = prev.filter(t => t.id !== id);
-      store.saveTrips(updated);
-      return updated;
+    void store.deleteTripRemote(id).then(() => {
+      setTrips(prev => prev.filter(t => t.id !== id));
     });
   }, []);
 
@@ -96,6 +90,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         cars,
         drivers,
         trips,
+        loading,
         addCar,
         updateCar,
         deleteCar,
