@@ -3,6 +3,7 @@ export interface Car {
   name: string;
   licensePlate: string;
   costPerKm: number; // cost in euros per km
+  imageUrl?: string;
 }
 
 export interface Driver {

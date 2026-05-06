@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import type { Trip } from '../types';
+import { calculateDrivingDistanceKm } from '../utils/routing';
 
 interface AddTripPageProps {
   onSaved: () => void;
@@ -27,22 +28,69 @@ export function AddTripPage({ onSaved, onBack }: AddTripPageProps) {
   const [notes, setNotes] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const [calculatingKm, setCalculatingKm] = useState(false);
+  const [calculationError, setCalculationError] = useState('');
 
   function validate(): boolean {
     const e: Record<string, string> = {};
     if (!carId) e.carId = 'Selecteer een auto';
     if (!driverId) e.driverId = 'Selecteer een bestuurder';
     if (!date) e.date = 'Vul een datum in';
+    if (mode === 'address') {
+      if (!startAddress.trim()) e.startAddress = 'Vul een startadres in';
+      if (!endAddress.trim()) e.endAddress = 'Vul een eindadres in';
+    }
     const km = parseFloat(kilometers.replace(',', '.'));
     if (!kilometers || isNaN(km) || km <= 0) {
-      e.kilometers = 'Vul een geldig aantal kilometers in (> 0)';
+      e.kilometers = mode === 'address'
+        ? 'Kilometers worden automatisch berekend na het invullen van beide adressen'
+        : 'Vul een geldig aantal kilometers in (> 0)';
     }
     setErrors(e);
     return Object.keys(e).length === 0;
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleCalculateKilometers(): Promise<number | null> {
+    const start = startAddress.trim();
+    const end = endAddress.trim();
+
+    if (!start || !end) {
+      setErrors(prev => ({
+        ...prev,
+        startAddress: !start ? 'Vul een startadres in' : prev.startAddress,
+        endAddress: !end ? 'Vul een eindadres in' : prev.endAddress,
+      }));
+      return null;
+    }
+
+    setCalculationError('');
+    setCalculatingKm(true);
+    try {
+      const km = await calculateDrivingDistanceKm(start, end);
+      setKilometers(String(km));
+      setErrors(prev => {
+        const next = { ...prev };
+        delete next.kilometers;
+        return next;
+      });
+      return km;
+    } catch {
+      setCalculationError('Kilometers konden niet worden berekend. Controleer de adressen en probeer opnieuw.');
+      return null;
+    } finally {
+      setCalculatingKm(false);
+    }
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (mode === 'address') {
+      const km = parseFloat(kilometers.replace(',', '.'));
+      if (!kilometers || isNaN(km) || km <= 0) {
+        const calculated = await handleCalculateKilometers();
+        if (!calculated || calculated <= 0) return;
+      }
+    }
     if (!validate()) return;
     setSaving(true);
     const km = parseFloat(kilometers.replace(',', '.'));
@@ -153,7 +201,10 @@ export function AddTripPage({ onSaved, onBack }: AddTripPageProps) {
                 <button
                   type="button"
                   className={`toggle-btn${mode === 'km' ? ' active' : ''}`}
-                  onClick={() => setMode('km')}
+                  onClick={() => {
+                    setMode('km');
+                    setCalculationError('');
+                  }}
                   aria-pressed={mode === 'km'}
                 >
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
@@ -168,7 +219,11 @@ export function AddTripPage({ onSaved, onBack }: AddTripPageProps) {
                 <button
                   type="button"
                   className={`toggle-btn${mode === 'address' ? ' active' : ''}`}
-                  onClick={() => setMode('address')}
+                  onClick={() => {
+                    setMode('address');
+                    setKilometers('');
+                    setCalculationError('');
+                  }}
                   aria-pressed={mode === 'address'}
                 >
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
@@ -194,9 +249,14 @@ export function AddTripPage({ onSaved, onBack }: AddTripPageProps) {
                     className="form-input"
                     placeholder="bijv. Dorpsstraat 1, Amsterdam"
                     value={startAddress}
-                    onChange={e => setStartAddress(e.target.value)}
+                    onChange={e => {
+                      setStartAddress(e.target.value);
+                      setCalculationError('');
+                      setKilometers('');
+                    }}
                     autoComplete="street-address"
                   />
+                  {errors.startAddress && <span className="form-error">{errors.startAddress}</span>}
                 </div>
                 <div className="form-group">
                   <label className="form-label" htmlFor="end-address">Eindadres</label>
@@ -206,10 +266,23 @@ export function AddTripPage({ onSaved, onBack }: AddTripPageProps) {
                     className="form-input"
                     placeholder="bijv. Stationsplein 1, Utrecht"
                     value={endAddress}
-                    onChange={e => setEndAddress(e.target.value)}
+                    onChange={e => {
+                      setEndAddress(e.target.value);
+                      setCalculationError('');
+                      setKilometers('');
+                    }}
                     autoComplete="street-address"
                   />
+                  {errors.endAddress && <span className="form-error">{errors.endAddress}</span>}
                 </div>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() => void handleCalculateKilometers()}
+                  disabled={calculatingKm}
+                >
+                  {calculatingKm ? 'Berekenen...' : 'Bereken kilometers'}
+                </button>
               </>
             )}
 
@@ -223,14 +296,16 @@ export function AddTripPage({ onSaved, onBack }: AddTripPageProps) {
                 type="number"
                 inputMode="decimal"
                 className="form-input"
-                placeholder="bijv. 42.5"
+                placeholder={mode === 'address' ? 'Wordt automatisch berekend' : 'bijv. 42.5'}
                 min="0.1"
                 step="0.1"
                 value={kilometers}
                 onChange={e => setKilometers(e.target.value)}
+                readOnly={mode === 'address'}
                 required
               />
               {errors.kilometers && <span className="form-error">{errors.kilometers}</span>}
+              {calculationError && <span className="form-error">{calculationError}</span>}
               {carId && (() => {
                 const car = cars.find(c => c.id === carId);
                 const km = parseFloat(kilometers.replace(',', '.'));

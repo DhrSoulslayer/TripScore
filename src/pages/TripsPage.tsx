@@ -194,13 +194,17 @@ export function TripsPage() {
             return (
               <div key={trip.id} className="trip-card">
                 <div className="trip-icon" aria-hidden="true">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" strokeWidth="2" strokeLinecap="round"
-                    strokeLinejoin="round">
-                    <path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v9a2 2 0 0 1-2 2h-3" />
-                    <circle cx="7.5" cy="17.5" r="2.5" />
-                    <circle cx="17.5" cy="17.5" r="2.5" />
-                  </svg>
+                  {car?.imageUrl ? (
+                    <img src={car.imageUrl} alt={car.name} className="car-image-thumb" />
+                  ) : (
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+                      strokeLinejoin="round">
+                      <path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v9a2 2 0 0 1-2 2h-3" />
+                      <circle cx="7.5" cy="17.5" r="2.5" />
+                      <circle cx="17.5" cy="17.5" r="2.5" />
+                    </svg>
+                  )}
                 </div>
                 <div className="trip-info">
                   <div className="trip-main">

@@ -7,10 +7,11 @@ interface CarFormState {
   name: string;
   licensePlate: string;
   costPerKm: string;
+  imageUrl: string;
 }
 
 function emptyForm(): CarFormState {
-  return { name: '', licensePlate: '', costPerKm: '' };
+  return { name: '', licensePlate: '', costPerKm: '', imageUrl: '' };
 }
 
 function carToForm(car: Car): CarFormState {
@@ -18,7 +19,17 @@ function carToForm(car: Car): CarFormState {
     name: car.name,
     licensePlate: car.licensePlate,
     costPerKm: car.costPerKm > 0 ? String(car.costPerKm) : '',
+    imageUrl: car.imageUrl ?? '',
   };
+}
+
+function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result ?? ''));
+    reader.onerror = () => reject(new Error('Bestand kon niet worden ingelezen'));
+    reader.readAsDataURL(file);
+  });
 }
 
 export function CarsPage() {
@@ -29,6 +40,7 @@ export function CarsPage() {
   const [form, setForm] = useState<CarFormState>(emptyForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   function openAdd() {
     setEditing(null);
@@ -62,6 +74,7 @@ export function CarsPage() {
       name: form.name.trim(),
       licensePlate: form.licensePlate.trim(),
       costPerKm: isNaN(cost) ? 0 : cost,
+      imageUrl: form.imageUrl || undefined,
     };
     if (editing) {
       updateCar({ ...editing, ...carData });
@@ -74,6 +87,37 @@ export function CarsPage() {
   function handleDelete(id: string) {
     deleteCar(id);
     setConfirmDeleteId(null);
+  }
+
+  async function handleImageChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setErrors(prev => ({ ...prev, imageUrl: 'Selecteer een geldig afbeeldingsbestand' }));
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      setErrors(prev => ({ ...prev, imageUrl: 'Afbeelding mag maximaal 2 MB zijn' }));
+      return;
+    }
+
+    setUploadingImage(true);
+    try {
+      const imageUrl = await readFileAsDataUrl(file);
+      setForm(prev => ({ ...prev, imageUrl }));
+      setErrors(prev => {
+        const next = { ...prev };
+        delete next.imageUrl;
+        return next;
+      });
+    } catch {
+      setErrors(prev => ({ ...prev, imageUrl: 'Afbeelding kon niet worden geladen' }));
+    } finally {
+      setUploadingImage(false);
+      event.target.value = '';
+    }
   }
 
   return (
@@ -126,13 +170,17 @@ export function CarsPage() {
           return (
             <div key={car.id} className="list-item">
               <div className="list-item-icon blue" aria-hidden="true">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
-                  stroke="currentColor" strokeWidth="2" strokeLinecap="round"
-                  strokeLinejoin="round">
-                  <path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v9a2 2 0 0 1-2 2h-3" />
-                  <circle cx="7.5" cy="17.5" r="2.5" />
-                  <circle cx="17.5" cy="17.5" r="2.5" />
-                </svg>
+                {car.imageUrl ? (
+                  <img src={car.imageUrl} alt={car.name} className="car-image-thumb" />
+                ) : (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+                    strokeLinejoin="round">
+                    <path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v9a2 2 0 0 1-2 2h-3" />
+                    <circle cx="7.5" cy="17.5" r="2.5" />
+                    <circle cx="17.5" cy="17.5" r="2.5" />
+                  </svg>
+                )}
               </div>
               <div className="list-item-info">
                 <div className="list-item-name">{car.name}</div>
@@ -217,6 +265,31 @@ export function CarsPage() {
                 onChange={e => setForm(f => ({ ...f, licensePlate: e.target.value.toUpperCase() }))}
                 style={{ textTransform: 'uppercase' }}
               />
+            </div>
+            <div className="form-group">
+              <label className="form-label" htmlFor="car-image">Afbeelding</label>
+              <input
+                id="car-image"
+                type="file"
+                className="form-input"
+                accept="image/*"
+                onChange={e => void handleImageChange(e)}
+              />
+              {form.imageUrl && (
+                <div className="car-image-preview-wrap">
+                  <img src={form.imageUrl} alt="Voorbeeld auto" className="car-image-preview" />
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => setForm(f => ({ ...f, imageUrl: '' }))}
+                  >
+                    Afbeelding verwijderen
+                  </button>
+                </div>
+              )}
+              {uploadingImage && <span className="form-hint">Afbeelding laden...</span>}
+              {errors.imageUrl && <span className="form-error">{errors.imageUrl}</span>}
+              <span className="form-hint">Upload een afbeelding tot maximaal 2 MB.</span>
             </div>
             <div className="form-group">
               <label className="form-label" htmlFor="car-cost">

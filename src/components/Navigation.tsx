@@ -24,7 +24,7 @@ export function Navigation({ currentPage, onNavigate }: NavigationProps) {
 
       {/* Add Trip */}
       <button
-        className="nav-add-btn"
+        className={`nav-add-btn${currentPage === 'add-trip' ? ' active' : ''}`}
         onClick={() => onNavigate('add-trip')}
         aria-label="Rit toevoegen"
       >
