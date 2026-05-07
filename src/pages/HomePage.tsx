@@ -131,13 +131,14 @@ export function HomePage({ onAddTrip }: HomePageProps) {
                     <span>·</span>
                     <span>{formatDate(trip.date)}</span>
                   </div>
-                  {(trip.startAddress || trip.endAddress) && (
-                    <div className="trip-address">
-                      {trip.startAddress && trip.endAddress
-                        ? `${trip.startAddress} → ${trip.endAddress}`
-                        : trip.startAddress || trip.endAddress}
-                    </div>
-                  )}
+                   {(trip.startAddress || trip.endAddress) && (
+                     <div className="trip-address">
+                       {trip.startAddress && trip.endAddress
+                         ? `${trip.startAddress} → ${trip.endAddress}`
+                         : trip.startAddress || trip.endAddress}
+                       {trip.returnTrip ? ' · Retour' : ''}
+                     </div>
+                   )}
                   {cost > 0 && <div className="trip-cost">{formatEuro(cost)}</div>}
                 </div>
               </div>

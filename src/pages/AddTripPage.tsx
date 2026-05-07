@@ -24,6 +24,7 @@ export function AddTripPage({ onSaved, onBack }: AddTripPageProps) {
   const [mode, setMode] = useState<InputMode>('km');
   const [startAddress, setStartAddress] = useState('');
   const [endAddress, setEndAddress] = useState('');
+  const [returnTrip, setReturnTrip] = useState(false);
   const [kilometers, setKilometers] = useState('');
   const [notes, setNotes] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -66,7 +67,7 @@ export function AddTripPage({ onSaved, onBack }: AddTripPageProps) {
     setCalculationError('');
     setCalculatingKm(true);
     try {
-      const km = await calculateDrivingDistanceKm(start, end);
+      const km = await calculateDrivingDistanceKm(start, end, returnTrip);
       setKilometers(String(km));
       setErrors(prev => {
         const next = { ...prev };
@@ -100,6 +101,7 @@ export function AddTripPage({ onSaved, onBack }: AddTripPageProps) {
       date,
       startAddress: mode === 'address' ? startAddress.trim() : '',
       endAddress: mode === 'address' ? endAddress.trim() : '',
+      returnTrip: mode === 'address' ? returnTrip : false,
       kilometers: km,
       notes: notes.trim(),
     };
@@ -203,6 +205,7 @@ export function AddTripPage({ onSaved, onBack }: AddTripPageProps) {
                   className={`toggle-btn${mode === 'km' ? ' active' : ''}`}
                   onClick={() => {
                     setMode('km');
+                    setReturnTrip(false);
                     setCalculationError('');
                   }}
                   aria-pressed={mode === 'km'}
@@ -221,6 +224,7 @@ export function AddTripPage({ onSaved, onBack }: AddTripPageProps) {
                   className={`toggle-btn${mode === 'address' ? ' active' : ''}`}
                   onClick={() => {
                     setMode('address');
+                    setReturnTrip(false);
                     setKilometers('');
                     setCalculationError('');
                   }}
@@ -275,6 +279,23 @@ export function AddTripPage({ onSaved, onBack }: AddTripPageProps) {
                   />
                   {errors.endAddress && <span className="form-error">{errors.endAddress}</span>}
                 </div>
+                <label
+                  className="form-label"
+                  htmlFor="return-trip"
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}
+                >
+                  <input
+                    id="return-trip"
+                    type="checkbox"
+                    checked={returnTrip}
+                    onChange={e => {
+                      setReturnTrip(e.target.checked);
+                      setCalculationError('');
+                      setKilometers('');
+                    }}
+                  />
+                  Retour
+                </label>
                 <button
                   type="button"
                   className="btn btn-ghost"

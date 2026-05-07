@@ -18,6 +18,7 @@ export interface Trip {
   date: string; // YYYY-MM-DD
   startAddress: string;
   endAddress: string;
+  returnTrip: boolean;
   kilometers: number;
   notes: string;
 }
