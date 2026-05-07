@@ -221,6 +221,7 @@ export function TripsPage() {
                       {trip.startAddress && trip.endAddress
                         ? `${trip.startAddress} → ${trip.endAddress}`
                         : trip.startAddress || trip.endAddress}
+                      {trip.returnTrip ? ' · Retour' : ''}
                     </div>
                   )}
                   {trip.notes && (

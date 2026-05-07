@@ -42,6 +42,18 @@ db.exec(`
   );
 `);
 
+const tripColumns = db.prepare("PRAGMA table_info('trips')").all();
+if (!tripColumns.some(column => column.name === 'returnTrip')) {
+  db.exec('ALTER TABLE trips ADD COLUMN returnTrip INTEGER NOT NULL DEFAULT 0');
+}
+
+function mapTripRow(trip) {
+  return {
+    ...trip,
+    returnTrip: Boolean(trip.returnTrip),
+  };
+}
+
 // ── Cars ──────────────────────────────────────────────────────────────────────
 
 app.get('/api/cars', (_req, res) => {
@@ -104,7 +116,7 @@ app.delete('/api/drivers/:id', (req, res) => {
 
 app.get('/api/trips', (_req, res) => {
   res.json(
-    db.prepare('SELECT * FROM trips ORDER BY createdAt DESC, date DESC').all(),
+    db.prepare('SELECT * FROM trips ORDER BY createdAt DESC, date DESC').all().map(mapTripRow),
   );
 });
 
@@ -115,6 +127,7 @@ app.post('/api/trips', (req, res) => {
     date,
     startAddress = '',
     endAddress = '',
+    returnTrip = false,
     kilometers,
     notes = '',
   } = req.body ?? {};
@@ -125,11 +138,21 @@ app.post('/api/trips', (req, res) => {
 
   const id = crypto.randomUUID();
   db.prepare(
-    `INSERT INTO trips
-       (id, carId, driverId, date, startAddress, endAddress, kilometers, notes)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-  ).run(id, carId, driverId, date, startAddress, endAddress, Number(kilometers), notes);
-  res.status(201).json(db.prepare('SELECT * FROM trips WHERE id = ?').get(id));
+     `INSERT INTO trips
+       (id, carId, driverId, date, startAddress, endAddress, returnTrip, kilometers, notes)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+   ).run(
+     id,
+     carId,
+     driverId,
+     date,
+     startAddress,
+     endAddress,
+     returnTrip ? 1 : 0,
+     Number(kilometers),
+     notes,
+   );
+   res.status(201).json(mapTripRow(db.prepare('SELECT * FROM trips WHERE id = ?').get(id)));
 });
 
 app.delete('/api/trips/:id', (req, res) => {
