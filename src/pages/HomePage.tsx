@@ -34,15 +34,6 @@ export function HomePage({ onAddTrip }: HomePageProps) {
     [monthTrips],
   );
 
-  const totalCost = useMemo(
-    () =>
-      monthTrips.reduce((sum, t) => {
-        const car = cars.find(c => c.id === t.carId);
-        return sum + t.kilometers * (car?.costPerKm ?? 0);
-      }, 0),
-    [monthTrips, cars],
-  );
-
   const recentTrips = trips.slice(0, 5);
 
   const monthName = now.toLocaleDateString('nl-NL', { month: 'long', year: 'numeric' });
@@ -85,11 +76,6 @@ export function HomePage({ onAddTrip }: HomePageProps) {
           <div className="stat-card">
             <div className="stat-label">Km deze maand</div>
             <div className="stat-value primary">{formatKm(totalKm)}</div>
-          </div>
-          <div className="stat-card full-width">
-            <div className="stat-label">Kosten deze maand</div>
-            <div className="stat-value success">{formatEuro(totalCost)}</div>
-            <div className="stat-sub">gebaseerd op kosten per km per auto</div>
           </div>
         </div>
 
