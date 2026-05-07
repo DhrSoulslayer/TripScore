@@ -34,7 +34,7 @@ async function geocodeAddress(address: string): Promise<GeocodeResult> {
 export async function calculateDrivingDistanceKm(
   startAddress: string,
   endAddress: string,
-  returnTrip = false,
+  isRoundTrip = false,
 ): Promise<number> {
   const start = await geocodeAddress(startAddress);
   const end = await geocodeAddress(endAddress);
@@ -53,6 +53,6 @@ export async function calculateDrivingDistanceKm(
     throw new Error('Geen route gevonden tussen deze adressen');
   }
 
-  const totalDistanceMeters = returnTrip ? distanceMeters * 2 : distanceMeters;
+  const totalDistanceMeters = isRoundTrip ? distanceMeters * 2 : distanceMeters;
   return Math.round((totalDistanceMeters / 1000) * 10) / 10;
 }
